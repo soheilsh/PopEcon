@@ -6,71 +6,71 @@ import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 
 # == Define parameters == #
-eta_a = 0.01       # Coefficient of technological growth in Agriculture
-eta_m = 0.02       # Coefficient of technological growth in Manufacturing
-delta = 0.1        # Power of Technological growth function
-alpha = 0.1        # Coefficient of Agricultural consumption in Utility function
-beta = 0.7         # Coefficient of Manufacturing consumption in Utility function
-Aa_0 = 10          # Initial level of technology in Agriculture
-Am_0 = 45          # Initial level of technology in Manufacturing
-C_0 = 0.01         # Minimum level of Agricultural consumption
-eps = 0.6          # Power of Manufacturing input in production function
-tu = 0.1           # Time spent to raise an unskilled child
-ts = 0.3           # Time spent to raise a skilled child
-T = 200            # Time horizon
-Tmax = 11          # Max Modeling Time
-stepsize = 0.1     # Step size
+eta_a = 0.01                        # Coefficient of technological growth in Agriculture
+eta_m = 0.02                        # Coefficient of technological growth in Manufacturing
+delta = 0.1                         # Power of Technological growth function
+alpha = 0.1                         # Coefficient of Agricultural consumption in Utility function
+beta = 0.7                          # Coefficient of Manufacturing consumption in Utility function
+Aa_0 = 10                           # Initial level of technology in Agriculture
+Am_0 = 45                           # Initial level of technology in Manufacturing
+C_0 = 0.01                          # Minimum level of Agricultural consumption
+eps = 0.6                           # Power of Manufacturing input in production function
+tu = 0.1                            # Time spent to raise an unskilled child
+ts = 0.3                            # Time spent to raise a skilled child
+T = 200                             # Time horizon
+Tmax = 11                           # Max Modeling Time
+stepsize = 0.1                      # Step size
 
 # == Generate age matrix == #
-u = np.zeros((20, T))           # Unskilled children
-s = np.zeros((20, T))           # Skilled children
-l = np.zeros((40, T))           # Unskilled adults (Total)
-m = np.zeros((40, T))           # Skilled adults
+u = np.zeros((20, T))               # Unskilled children
+s = np.zeros((20, T))               # Skilled children
+l = np.zeros((40, T))               # Unskilled adults (Total)
+m = np.zeros((40, T))               # Skilled adults
+Pop = [0]*T                         # Total Population
 
 # == Labor == #
-mt = [0]*T          # Total skilled adults in Manufacturing
-lt = [0]*T          # Total unskilled adults
-lmt = [0]*T         # Total unskilled adults in Manufacturing 
-lat = [0]*T         # Total unskilled adults in Agriculture 
+mt = [0]*T                          # Total skilled adults in Manufacturing
+lt = [0]*T                          # Total unskilled adults
+lmt = [0]*T                         # Total unskilled adults in Manufacturing 
+lat = [0]*T                         # Total unskilled adults in Agriculture 
 
 # == Generate education matrix == #
-gammau = np.zeros((20, T))
-gammas = np.zeros((20, T))
+gammau = np.zeros((20, T))          # Child rearing time spent by unskilled parents
+gammas = np.zeros((20, T))          # Child rearing time spent by skilled parents
 
 # == Prices == #
-pa = [0]*T
-pm = [0]*T
+pa = [0]*T                          # Pice of Agricultural good
 
 # == Wages == #
-wa = [0]*T
-wm = [0]*T
+wu = [0]*T                          # Wage of unskilled labor
+ws = [0]*T                          # Wage of skilled labor
 
 # == Technology == #
-B = [0]*T
-Aa = [Aa_0]*T
-Am = [Am_0]*T
+B = [0]*T                           # Technological growth underlying function
+Aa = [Aa_0]*T                       # Level of technology in Agricultural sector
+Am = [Am_0]*T                       # Level of technology in Manufacturing sector
 
 # == Output == #
-Ya = [0]*T
-Ym = [0]*T
+Ya = [0]*T                          # Agricultural output
+Ym = [0]*T                          # Manufacturing output
 
 # == Consumption == #
-ca = np.zeros((2, T))
-cm = np.zeros((2, T))
+ca = np.zeros((2, T))               # Consumption of Agricultural good
+cm = np.zeros((2, T))               # Consumption of Manufacturing good
 
 # == Utility == #
-w = np.zeros((2, T))
+U = np.zeros((2, T))                # Utility
 
 # == Result == #
 result = np.zeros((2, T))
-nopt = 0.1 + np.zeros((4, T))
-nopt1 = 0.1 + np.zeros((4, T))
-nopt2 = 0.1 + np.zeros((4, T))
+nopt = 0.1 + np.zeros((4, T))       # Optimal number of children (updated)
+nopt1 = 0.1 + np.zeros((4, T))      # Optimal number of children (new)
+nopt2 = 0.1 + np.zeros((4, T))      # Optimal number of children (old)
 
 # == Error == #
-wr = [0]*T          # Children future wage ratio 
-er = [0]*T
-tol = 0.1
+wr = [0]*T                          # Ratio of future wages
+er = [0]*T                          # Difference between ts/tu and wr
+tol = 0.1                           # Error margin
 
 # Initializing
 for i in range(20):
@@ -83,15 +83,16 @@ for i in range(20):
     gammau[i, :] = 1-alpha-beta
     gammas[i, :] = 1-alpha-beta
 mt[0] = sum(m[:,0])
-lt[0] = sum(l[:,0])    
+lt[0] = sum(l[:,0])
+Pop[0] = sum(u[:, 0] + s[:, 0]) + lt[0] + mt[0]
 B[0] = (mt[0]/(mt[0] + lt[0]))**delta
 lmt[0] = (((beta/alpha)/Aa[0]) * (1 - eps) * (Aa[0] * lt[0] - (mt[0] + lt[0]) * C_0))/(1 + (beta/alpha) * (1 - eps))
 lat[0] = lt[0] - lmt[0]
 Ya[0] = Aa[0] * lat[0]
 Ym[0] = Am[0] * mt[0]**eps * lmt[0]**(1 - eps)
 pa[0] = (Am[0]/Aa[0]) * (1-eps) * (mt[0]/lmt[0])**eps
-wa[0] = pa[0] * Aa[0]
-wm[0] = eps * Am[0] * (mt[0]/lmt[0])**(eps - 1)   
+wu[0] = pa[0] * Aa[0]
+ws[0] = eps * Am[0] * (mt[0]/lmt[0])**(eps - 1)   
     
 def util(n):
     for t in range(tx, tx + 60):
@@ -141,17 +142,17 @@ def util(n):
         Ya[t] = Aa[t] * lat[t]
         Ym[t] = Am[t] * mt[t]**eps * lmt[t]**(1 - eps)
         pa[t] = (Am[t]/Aa[t]) * (1-eps) * (mt[t]/lmt[t])**eps
-        wa[t] = pa[t] * Aa[t]
-        wm[t] = eps * Am[t] * (mt[t]/lmt[t])**(eps - 1)
+        wu[t] = pa[t] * Aa[t]
+        ws[t] = eps * Am[t] * (mt[t]/lmt[t])**(eps - 1)
     if typ == 1:        #Unskilled
-        ca[typ-1, tx] = (wa[tx] * (1-gammau[0, tx]) + (beta/alpha) * pa[tx] * C_0)/((1+ (beta/alpha)) * pa[tx])
+        ca[typ-1, tx] = (wu[tx] * (1-gammau[0, tx]) + (beta/alpha) * pa[tx] * C_0)/((1+ (beta/alpha)) * pa[tx])
         cm[typ-1, tx]  = (beta/alpha) * pa[tx] * (ca[typ-1, tx] - C_0)
-        w[typ-1, tx]  = -(alpha * np.log(ca[typ-1, tx] - C_0) + beta * np.log(cm[typ-1, tx] ) + (1 - alpha - beta) * np.log(n[0] * sum(wm[tx+20:tx+60]) + n[1] * sum(wa[tx+20:tx+60])))
+        U[typ-1, tx]  = -(alpha * np.log(ca[typ-1, tx] - C_0) + beta * np.log(cm[typ-1, tx] ) + (1 - alpha - beta) * np.log(n[0] * sum(wu[tx+20:tx+60]) + n[1] * sum(ws[tx+20:tx+60])))
     else:              #Skilled
-        ca[typ-1, tx] = (wm[tx] * (1-gammas[0, tx]) + (beta/alpha) * pa[tx] * C_0)/((1+ (beta/alpha)) * pa[tx])
+        ca[typ-1, tx] = (ws[tx] * (1-gammas[0, tx]) + (beta/alpha) * pa[tx] * C_0)/((1+ (beta/alpha)) * pa[tx])
         cm[typ-1, tx]  = (beta/alpha) * pa[tx] * (ca[typ-1, tx] - C_0)
-        w[typ-1, tx]  = -(alpha * np.log(ca[typ-1, tx] - C_0) + beta * np.log(cm[typ-1, tx] ) + (1 - alpha - beta) * np.log(n[0] * sum(wm[tx+20:tx+60]) + n[1] * sum(wa[tx+20:tx+60])))
-    return w[typ-1, tx]
+        U[typ-1, tx]  = -(alpha * np.log(ca[typ-1, tx] - C_0) + beta * np.log(cm[typ-1, tx] ) + (1 - alpha - beta) * np.log(n[0] * sum(wu[tx+20:tx+60]) + n[1] * sum(ws[tx+20:tx+60])))
+    return U[typ-1, tx]
 
 for i in range(2):
     for tx in range(1,Tmax):
@@ -175,7 +176,10 @@ for i in range(2):
             nopt1[(typ-1)*2:(typ-1)*2+2, tx] = res.x
             print(i, tx, typ)
     for tx in range(1, Tmax):        
-        wr[tx] = sum(wm[tx+20:tx+59])/sum(wa[tx+20:tx+59])
+        wr[tx] = sum(ws[tx+20:tx+59])/sum(wu[tx+20:tx+59])
         er[tx] = wr[tx] - (ts/tu)
         nopt[:, tx] = stepsize * nopt1[:, tx] + ( 1- stepsize) * nopt2[:, tx]
         nopt2[:, tx] = nopt[:, tx]
+        Pop[tx] = sum(u[:, tx] + s[:, tx]) + lt[tx] + mt[tx]
+    x = range(T)
+    plt.plot(x, Pop)
