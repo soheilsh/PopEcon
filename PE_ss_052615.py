@@ -1,25 +1,25 @@
 """
 
-"""
+#"""
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 
 # == Define parameters == #
 eta_a = 0.01                        # Coefficient of technological growth in Agriculture
-eta_m = 0.02                        # Coefficient of technological growth in Manufacturing
-delta = 0.1                         # Power of Technological growth function
-alpha = 0.1                         # Coefficient of Agricultural consumption in Utility function
-beta = 0.7                          # Coefficient of Manufacturing consumption in Utility function
-Aa_0 = 5                            # Initial level of technology in Agriculture (10 @ 1900)
-Am_0 = 15                           # Initial level of technology in Manufacturing (45 @ 1900)
-C_0 = 0.01                          # Minimum level of Agricultural consumption
+eta_m = 0.01                        # Coefficient of technological growth in Manufacturing
+delta = 0.9                         # Power of Technological growth function
+alpha = 0.002                       # Coefficient of Agricultural consumption in Utility function
+beta = 0.598                        # Coefficient of Manufacturing consumption in Utility function
+Aa_0 = 50                           # Initial level of technology in Agriculture (10 @ 1900)
+Am_0 = 100                          # Initial level of technology in Manufacturing (45 @ 1900)
+C_0 = 2.43                          # Minimum level of Agricultural consumption
 eps = 0.6                           # Power of Manufacturing input in production function
-tu = 0.1                            # Time spent to raise an unskilled child
-ts = 0.3                            # Time spent to raise a skilled child
-T = 301                             # Time horizon
-Tmax = 200                           # Max Modeling Time
-stepsize = 0.05                      # Step size
+tu = 0.05                            # Time spent to raise an unskilled child
+ts = 0.1                            # Time spent to raise a skilled child
+ro = 0.015                          # Annual social time preference discount rate 
+Tmax = 200                          # Max Modeling Time
+T = Tmax + 101                      # Time horizon
 
 # == Age matrix == #
 u = np.zeros((20, T))               # number of Unskilled children
@@ -74,8 +74,10 @@ nopt2 = 0.5 + np.zeros((4, T))      # Optimal number of children (old)
 # == Error == #
 wr = [0]*T                          # Ratio of future wages
 er = [0]*T                          # Difference between ts/tu and wr
-tol = 0.05                          # Error margin
-tcnt = [0]*T 
+tol = 0.1                           # Error margin
+stepsize = 0.1                      # Step size
+tcnt1 = [0]*T                       # Number of points within the error band (for the whole time period)
+tcnt2 = [0]*T                       # Number of points within the error band (for the 1900-2010 period)
 
 PopData =  [0]*Tmax
 GDPData =  [0]*Tmax
@@ -114,11 +116,13 @@ def state(nuu, nsu, nus, nss, t):
     B[t] = (mt[t]/(mt[t] + lt[t]))**delta
     Aa[t] = (1 + eta_a * B[t-1]) * Aa[t-1]
     Am[t] = (1 + eta_m * B[t-1]) * Am[t-1]
-    lmt[t] = (((beta/alpha)/Aa[t]) * (1 - eps) * (Aa[t] * lt[t] - (mt[t] + lt[t]) * C_0))/(1 + (beta/alpha) * (1 - eps))
+    Pop[t] = ct[t] + sum(lg[:, t]) + sum(mg[:, t]) + sum(l[20:40, t]) + sum(m[20:40, t])
+    lmt[t] = (((beta/alpha)/Aa[t]) * (1 - eps) * (Aa[t] * lt[t] - Pop[t] * C_0))/(1 + (beta/alpha) * (1 - eps))
     lat[t] = lt[t] - lmt[t]
     Ya[t] = Aa[t] * lat[t]
     Ym[t] = Am[t] * mt[t]**eps * lmt[t]**(1 - eps)
     pa[t] = (Am[t]/Aa[t]) * (1-eps) * (mt[t]/lmt[t])**eps
+    Y[t] = pa[t] * Ya[t] + Ym[t]
     wu[t] = pa[t] * Aa[t]
     ws[t] = eps * Am[t] * (mt[t]/lmt[t])**(eps - 1)
 
@@ -188,11 +192,9 @@ Pop[0] = ct[0] + sum(lg[:, 0]) + sum(mg[:, 0]) + sum(l[20:40, 0]) + sum(m[20:40,
 Y[0] = pa[0] * Ya[0] + Ym[0]
 for t in range(1, T):
     state(nopt[0, t], nopt[1, t], nopt[2, t], nopt[3, t], t)
-    Pop[t] = ct[t] + sum(lg[:, t]) + sum(mg[:, t]) + sum(l[20:40, t]) + sum(m[20:40, t])
-    Y[t] = pa[t] * Ya[t] + Ym[t]
-  
-for i in range(50):
-    tcnt[i]=0
+for i in range(20):
+    tcnt1[i]=0
+    tcnt2[i]=0
     wr[0] = sum(ws[20:60])/sum(wu[20:60])
     for tx in range(1,Tmax + 41):
         wr[tx] = sum(ws[tx+20:tx+60])/sum(wu[tx+20:tx+60])
@@ -210,8 +212,9 @@ for i in range(50):
                 cons = ({'type': 'eq',
                          'fun': lambda x: x[1]})
             else:
+                tcnt1[i] = tcnt1[i] + 1
                 if (tx > 59) & (tx < 171):
-                    tcnt[i] = tcnt[i] + 1
+                    tcnt2[i] = tcnt2[i] + 1
                 tst = 's&u'
                 bnds = [(0, None), (0, None)]
                 cons = ({'type': 'eq',
@@ -221,7 +224,7 @@ for i in range(50):
             res = minimize(util, x0, method='SLSQP', bounds=bnds, constraints=cons, options={'xtol': 1e-8, 'disp': False})
             result[typ-1, tx] = res.fun
             nopt1[(typ-1)*2:(typ-1)*2+2, tx] = res.x
-#            print(i, tx, typ, tst , tcnt[i], ':  ', round(res.x[0], 3), round(res.x[1], 3), 'nratio:', round(nratio, 3))
+#            print(i, tx, typ, tst , tcnt1[i], tcnt2[i],':  ', round(res.x[0], 3), round(res.x[1], 3), 'nratio:', round(nratio, 3))
         nuu = nopt1[0, tx]
         nsu = nopt1[1, tx]
         nus = nopt1[2, tx]
@@ -233,24 +236,24 @@ for i in range(50):
         nopt2[:, t] = nopt[:, t]
         nopt[:, t] = stepsize * nopt1[:, t] + ( 1- stepsize) * nopt2[:, t]
         state(nopt[0, t], nopt[1, t], nopt[2, t], nopt[3, t], t)
-        Pop[t] = ct[t] + sum(lg[:, t]) + sum(mg[:, t]) + sum(l[20:40, t]) + sum(m[20:40, t])
-        Y[t] = pa[t] * Ya[t] + Ym[t]
     x = range(1840, 1840 + Tmax)
-    plt.plot(x[0:Tmax], Pop[0:Tmax], 'b')
-    plt.plot(x[0:Tmax], PopData[0:Tmax], 'r')
+    plt.plot(x[0:Tmax], Pop[0:Tmax], 'b', label ="Model")
+    plt.plot(x[0:Tmax], PopData[0:Tmax], 'r', label ="Data")
     plt.xlabel('Time')
     plt.ylabel('Population (millions)')
     plt.title('Population Growth')
     axes = plt.gca()
     axes.set_xlim([1840,2010])
+    plt.legend(loc=1, prop={'size':8})
     plt.show()
-    plt.plot(x[0:Tmax], Y[0:Tmax], 'b')
-    plt.plot(x[0:Tmax], GDPData[0:Tmax], 'r')
+    plt.plot(x[0:Tmax], Y[0:Tmax], 'b', label ="Model")
+    plt.plot(x[0:Tmax], GDPData[0:Tmax], 'r', label ="Data")
     plt.xlabel('Time')
     plt.ylabel('GDP')
     plt.title('Output Growth')
     axes = plt.gca()
-    axes.set_xlim([1840,2010])    
+    axes.set_xlim([1840,2010])
+    plt.legend(loc=1, prop={'size':8})
     plt.show()
     plt.plot(x[0:Tmax], wr[0:Tmax], 'r')
     plt.plot(x[0:Tmax], [ts/tu]*Tmax, 'g')
@@ -262,4 +265,4 @@ for i in range(50):
     axes = plt.gca()
     axes.set_xlim([1900,2010])    
     plt.show()
-    print(i, round(tcnt[i]/1.1, 2),'%')
+    print(i, round(tcnt1[i]*100/T, 2),'%', round(tcnt2[i]/1.1, 2),'%')
