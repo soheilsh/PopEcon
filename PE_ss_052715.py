@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 
 # == Define parameters == #
-eta_a = 0.1                        # Coefficient of technological growth in Agriculture
-eta_m = 0.1                        # Coefficient of technological growth in Manufacturing
+eta_a = 0.01                        # Coefficient of technological growth in Agriculture
+eta_m = 0.01                        # Coefficient of technological growth in Manufacturing
 delta = 0.9                         # Power of Technological growth function
 alpha = 0.002182                    # Coefficient of Agricultural consumption in Utility function
 beta = 0.597818                     # Coefficient of Manufacturing consumption in Utility function
@@ -287,5 +287,15 @@ for i in range(niter):
     axes.set_xlim([1900,2010])
     plt.legend(loc=1, prop={'size':8})
     plt.show()
-    
+ 
+    plt.plot(x[0:Tmax], gammau[0, 0:Tmax], 'm', label = "unskilled parents")
+    plt.plot(x[0:Tmax], gammas[0, 0:Tmax], 'c', label = "skilled parents")  
+    plt.xlabel('Time')
+    plt.ylabel('Ratio')
+    plt.title('Parenting time as a portion of the total time')
+    axes = plt.gca()
+    axes.set_xlim([1900,2010])
+    plt.legend(loc=1, prop={'size':8})
+    plt.show()
+   
     print(i, round(tcnt1[i]*100/T, 2),'%', round(tcnt2[i]/1.11, 2),'%')
