@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 
 # == Define parameters == #
-eta_a = 0.01                        # Coefficient of technological growth in Agriculture
-eta_m = 0.01                        # Coefficient of technological growth in Manufacturing
+eta_a = 0.02                        # Coefficient of technological growth in Agriculture
+eta_m = 0.02                        # Coefficient of technological growth in Manufacturing
 delta = 0.9                         # Power of Technological growth function
 alpha = 0.002182                    # Coefficient of Agricultural consumption in Utility function
 beta = 0.597818                     # Coefficient of Manufacturing consumption in Utility function
@@ -73,12 +73,14 @@ nopt2 = 0.5 + np.zeros((4, T))      # Optimal number of children (old)
 
 # == Error == #
 wr = [0]*T                          # Ratio of future wages
-er = [0]*T                          # Difference between ts/tu and wr
-tol = 0.05                          # Error margin
+er1 = [0]*T                         # Difference between ts/tu and wr
+er2 = [0]*T                         # Difference between new and old solutions
+tol1 = 0.01                         # Error margin for constraints
+tol2 = 0.01                         # Error margin for results
 stepsize = 0.1                      # Step size
 tcnt1 = [0]*T                       # Number of points within the error band (for the whole time period)
 tcnt2 = [0]*T                       # Number of points within the error band (for the 1900-2010 period)
-niter = 5                          # number of iterations
+niter = 20                          # number of iterations
 
 PopData =  [0]*Tmax
 GDPData =  [0]*Tmax
@@ -191,15 +193,15 @@ for i in range(niter):
     wr[0] = sum(ws[20:60])/sum(wu[20:60])
     for tx in range(1,Tmax + 41):
         wr[tx] = sum(ws[tx+20:tx+60])/sum(wu[tx+20:tx+60])
-        er[tx] = wr[tx] - (ts/tu)
+        er1[tx] = wr[tx] - (ts/tu)
         nratio = np.mean([nopt[0, tx]/nopt[1, tx], nopt[2, tx]/nopt[3, tx]])
-        if er[tx] > tol:
+        if er1[tx] > tol1:
             tst = 's'
             bnds = [(0, 0), (0, None)]
             cons = ({'type': 'eq',
                      'fun': lambda x: x[0]})        
         else:
-            if er[tx] < -tol:
+            if er1[tx] < -tol1:
                 tst = 'u'
                 bnds = [(0, None), (0, 0)]
                 cons = ({'type': 'eq',
@@ -228,7 +230,8 @@ for i in range(niter):
     for t in range(1, T):
         nopt2[:, t] = nopt[:, t]
         nopt[:, t] = stepsize * nopt1[:, t] + ( 1- stepsize) * nopt2[:, t]
-        state(nopt[0, t], nopt[1, t], nopt[2, t], nopt[3, t], t)
+        state(nopt[0, t], nopt[1, t], nopt[2, t], nopt[3, t], t)    
+        er2[t] = sum(abs(nopt2[:, t] - nopt1[:, t]))
     x = range(1850, 1850 + Tmax)
     
     plt.plot(x[0:Tmax], Pop[0:Tmax], 'b', label ="Model")
@@ -255,13 +258,24 @@ for i in range(niter):
     
     plt.plot(x[0:Tmax], wr[0:Tmax], 'r')
     plt.plot(x[0:Tmax], [ts/tu]*Tmax, 'g')
-    plt.plot(x[0:Tmax], [j + tol for j in [ts/tu]*Tmax] , 'g--')
-    plt.plot(x[0:Tmax], [j - tol for j in [ts/tu]*Tmax], 'g--')    
+    plt.plot(x[0:Tmax], [j + tol1 for j in [ts/tu]*Tmax] , 'g--')
+    plt.plot(x[0:Tmax], [j - tol1 for j in [ts/tu]*Tmax], 'g--')    
     plt.xlabel('Time')
     plt.ylabel('Ratio')
     plt.title('Wages ratio')
     axes = plt.gca()
-    axes.set_xlim([1900,2010])    
+    axes.set_xlim([1900,2010])
+    axes.set_ylim([1.5,2.5])
+    plt.show()
+    
+    plt.plot(x[0:Tmax], er2[0:Tmax], 'r')
+    plt.plot(x[0:Tmax], [0]*Tmax, 'g')
+    plt.plot(x[0:Tmax], [j + tol2 for j in [0]*Tmax] , 'g--')    
+    plt.xlabel('Time')
+    plt.ylabel('Error')
+    plt.title('Error as the cumulative difference between two runs')
+    axes = plt.gca()
+    axes.set_xlim([1900,2010])
     plt.show()
     
     plt.plot(x[0:Tmax], nopt2[0, 0:Tmax], 'm--', label = "unskilled children: previous run")
@@ -273,6 +287,7 @@ for i in range(niter):
     plt.title('Number of children of the unskilled parents')
     axes = plt.gca()
     axes.set_xlim([1900,2010])
+    axes.set_ylim([0,2.5])    
     plt.legend(loc=1, prop={'size':8})
     plt.show()
     
@@ -285,6 +300,7 @@ for i in range(niter):
     plt.title('Number of children of the skilled parents')
     axes = plt.gca()
     axes.set_xlim([1900,2010])
+    axes.set_ylim([0,2.5])      
     plt.legend(loc=1, prop={'size':8})
     plt.show()
  
@@ -294,7 +310,7 @@ for i in range(niter):
     plt.ylabel('Ratio')
     plt.title('Parenting time as a portion of the total time')
     axes = plt.gca()
-    axes.set_xlim([1900,2010])
+    axes.set_xlim([1900,2010])     
     plt.legend(loc=1, prop={'size':8})
     plt.show()
    
