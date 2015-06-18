@@ -12,7 +12,7 @@ eps = 0.6                           # Power of Manufacturing input in production
 ts = 0.40                           # Time spent to raise a skilled child
 tu = 0.20                           # Time spent to raise an unskilled child
 delta = 0.9                         # Power of Technological growth function
-B = 0                               # Coefficient of technological growth
+B0 = 1                              # Coefficient of technological growth
 eta_a = 0.02                        # Coefficient of technological growth in Agriculture
 eta_m = 0.02                        # Coefficient of technological growth in Manufacturing
 beta = 0.597818                     # Coefficient of Manufacturing consumption in Utility function
@@ -117,7 +117,7 @@ def state(nuu, nsu, nus, nss, t):
     ct[t] = sum(u[:, t] + s[:, t])
     mt[t] = sum(m[:,t])
     lt[t] = sum(l[:,t])
-    B[t] = (mt[t]/(mt[t] + lt[t]))**delta
+    B[t] = B0 * (mt[t]/(mt[t] + lt[t]))**delta
     Aa[t] = (1 + eta_a * B[t-1]) * Aa[t-1]
     Am[t] = (1 + eta_m * B[t-1]) * Am[t-1]
     Pop[t] = ct[t] + sum(lg[:, t]) + sum(mg[:, t]) + sum(l[20:40, t]) + sum(m[20:40, t])
@@ -174,7 +174,7 @@ for i in range(20):
 ct[0] = sum(u[:, 0] + s[:, 0])
 mt[0] = sum(m[:,0])
 lt[0] = sum(l[:,0])
-B[0] = (mt[0]/(mt[0] + lt[0]))**delta
+B[0] = B0 * (mt[0]/(mt[0] + lt[0]))**delta
 Pop[0] = ct[0] + sum(lg[:, 0]) + sum(mg[:, 0]) + sum(l[20:40, 0]) + sum(m[20:40, 0])
 lmt[0] = (((beta/alpha)/Aa[0]) * (1 - eps) * (Aa[0] * lt[0] - Pop[0] * C_0))/(1 + (beta/alpha) * (1 - eps))
 lat[0] = lt[0] - lmt[0]
