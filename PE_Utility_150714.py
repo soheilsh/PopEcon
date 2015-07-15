@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
+import six 
+from six.moves import zip
 
 # == Define parameters == #
 ro = 0.015                          # Annual social time preference discount rate
@@ -56,13 +58,8 @@ Y = [0]*T                           # Total output
 Ya = [0]*T                          # Agricultural output
 Ym = [0]*T                          # Manufacturing output
 
-# == Consumption == #
-ca = np.zeros((2, T))               # Consumption of Agricultural good
-cm = np.zeros((2, T))               # Consumption of Manufacturing good
-
 # == Utility == #
-W = np.zeros((2, 40))               # Utility at each age
-U = np.zeros((2, Tmax))             # Total Utility
+W = [0]*20                          # Utility at each age
 df = [0]*40                         # Discount factor
 for t in range(40):
     df[t] = 1/(1 + ro)**t
@@ -79,10 +76,10 @@ er1 = [0]*T                         # Difference between ts/tu and wr
 er2 = [0]*T                         # Difference between new and old solutions
 tol1 = 0.05                         # Error margin for constraints
 tol2 = 0.05                         # Error margin for results
-stepsize = 0.1                      # Step size
-tcnt1 = [0]*T                       # Number of points within the error band (for the whole time period)
-tcnt2 = [0]*T                       # Number of points within the error band (for the 1900-2010 period)
-niter = 1                           # number of iterations
+stepsize = 0.05                     # Step size
+niter = 60                         # number of iterations
+tcnt1 = [0]*niter                   # Number of points within the error band (for the whole time period)
+tcnt2 = [0]*niter                   # Number of points within the error band (for the 1900-2010 period)
 
 PopData =  [0]*Tmax
 GDPData =  [0]*Tmax
@@ -132,33 +129,23 @@ def state(nuu, nsu, nus, nss, t):
 
 def util(n):
     gamma = n[0] * tu + n[1] * ts 
-    U[typ - 1, tx] = 0
+    U = 0
     wud = 0
     wsd = 0
     for t in range(tx + 20, tx + 60):
         wud = wud + wu[t] * df[t - (tx + 20)]
-        wsd = wsd + wu[t] * df[t - (tx + 20)]
-    for t in range(tx, tx + 40):
-        if t<tx + 20:
-            if typ == 1:
-                cax = (wu[t] * (1 - gamma) + (beta/alpha) * pa[t] * C_0)/((1 + (beta/alpha)) * pa[t])
-                cmx = (beta/alpha) * pa[t] * (cax - C_0)
-                W[0, t - tx] = alpha * np.log(cax - C_0) + beta * np.log(cmx) + (1 - alpha - beta) * np.log(n[0] * wud + n[1] * wsd)
-            else:
-                cax = (ws[t] * (1 - gamma) + (beta/alpha) * pa[t] * C_0)/((1 + (beta/alpha)) * pa[t])
-                cmx = (beta/alpha) * pa[t] * (cax - C_0)
-                W[1, t - tx] = alpha * np.log(cax - C_0) + beta * np.log(cmx) + (1 - alpha - beta) * np.log(n[0] * wud + n[1] * wsd)
+        wsd = wsd + ws[t] * df[t - (tx + 20)]
+    for t in range(tx, tx + 20):
+        if typ == 1:
+            cax = (wu[t] * (1 - gamma) + (beta/alpha) * pa[t] * C_0)/((1 + (beta/alpha)) * pa[t])
+            cmx = (beta/alpha) * pa[t] * (cax - C_0)
+            W[t - tx] = alpha * np.log(cax - C_0) + beta * np.log(cmx) + (1 - alpha - beta) * np.log(n[0] * wud + n[1] * wsd)
         else:
-            if typ == 1:
-                cax = (wu[t] + (beta/alpha) * pa[t] * C_0)/((1 + (beta/alpha)) * pa[t])
-                cmx = (beta/alpha) * pa[t] * (cax - C_0)                
-                W[0, t - tx] = alpha * np.log(cax - C_0) + beta * np.log(cmx)
-            else:
-                cax = (ws[t] + (beta/alpha) * pa[t] * C_0)/((1 + (beta/alpha)) * pa[t])
-                cmx = (beta/alpha) * pa[t] * (cax - C_0)                 
-                W[1, t - tx] = alpha * np.log(cax - C_0) + beta * np.log(cmx)
-        U[typ - 1, tx] = U[typ - 1, tx] + W[typ - 1, t - tx] * df[t - tx]
-    return -U[typ - 1, tx]
+            cax = (ws[t] * (1 - gamma) + (beta/alpha) * pa[t] * C_0)/((1 + (beta/alpha)) * pa[t])
+            cmx = (beta/alpha) * pa[t] * (cax - C_0)
+            W[t - tx] = alpha * np.log(cax - C_0) + beta * np.log(cmx) + (1 - alpha - beta) * np.log(n[0] * wud + n[1] * wsd)
+        U = U + W[t - tx] * df[t - tx]
+    return -U
 
 # == Initializing @ year 1840 == #
 u[0:20, 0] = [0.521743004, 0.576141049, 0.604033241, 0.577785019, 0.592997873, 0.574931298, 0.566337374, 0.53020305, 0.568835914, 0.468570899, 0.542695061, 0.432128187, 0.520871421, 0.443058421, 0.482480313, 0.415404037, 0.453997221, 0.424748101, 0.460572766, 0.386064659]
@@ -169,8 +156,8 @@ l[20:40, 0] = [0.33266442, 0.120067581, 0.159124148, 0.133149454, 0.140462195, 0
 m[20:40, 0] = [0.00678907, 0.002450359, 0.003247432, 0.002717336, 0.002866575, 0.004599923, 0.002669087, 0.002342636, 0.00271837, 0.00220643, 0.004976721, 0.001621607, 0.002259723, 0.001581548, 0.001712239, 0.002286288, 0.001710215, 0.001252905, 0.001397406, 0.001020923]
 
 for i in range(20):
-    gammau[i, 0] = nopt[0, 0] * tu + nopt[1, 0] * ts
-    gammas[i, 0] = nopt[2, 0] * tu + nopt[3, 0] * ts
+    gammau[i, 0] = 1- alpha - beta
+    gammas[i, 0] = 1- alpha - beta
     l[i, 0] = lg[i, 0] * (1 - gammau[i, 0])
     m[i, 0] = mg[i, 0] * (1 - gammas[i, 0])
 ct[0] = sum(u[:, 0] + s[:, 0])
@@ -198,20 +185,12 @@ Y[0] = pa[0] * Ya[0] + Ym[0]
 
 for t in range(1, T):
     state(nopt[0, t], nopt[1, t], nopt[2, t], nopt[3, t], t)
-for t in range(1, Tmax):
-    for typ in [1, 2]:
-        if typ == 1:                            #Unskilled
-            ca[0, t] = (wu[t] * (1 - gammau[0, t]) + (beta/alpha) * pa[t] * C_0)/((1 + (beta/alpha)) * pa[t])
-            cm[0, t] = (beta/alpha) * pa[t] * (ca[0, t] - C_0)
-        if typ == 2:                            #Unskilled
-            ca[1, t] = (ws[t] * (1 - gammas[0, t]) + (beta/alpha) * pa[t] * C_0)/((1 + (beta/alpha)) * pa[t])
-            cm[1, t] = (beta/alpha) * pa[t] * (ca[1, t] - C_0)    
 for i in range(niter):
     tcnt1[i]=0
     tcnt2[i]=0
-    wr[0] = sum(ws[20:60])/sum(wu[20:60])
+    wr[0] = sum([a * b for a,b in zip(ws[20:60], df)])/sum([a * b for a,b in zip(wu[20:60], df)])
     for tx in range(1, Tmax):
-        wr[tx] = sum(ws[tx+20:tx+60])/sum(wu[tx+20:tx+60])
+        wr[tx] = sum([a * b for a,b in zip(ws[tx+20:tx+60], df)])/sum([a * b for a,b in zip(wu[tx+20:tx+60], df)])
         er1[tx] = wr[tx] - (ts/tu)
         nratio = np.mean([nopt[0, tx]/nopt[1, tx], nopt[2, tx]/nopt[3, tx]])
         if er1[tx] > tol1:
@@ -235,7 +214,11 @@ for i in range(niter):
                          'fun': lambda x: x[0] / x[1] - nratio})
         x0 = [0.5, 0.5]
         for typ in [1, 2]:
-            res = minimize(util, x0, method='SLSQP', bounds=bnds, constraints=cons, options={'disp': False})
+            if i==59 and tx == 28:
+                disp = True
+            else:
+                disp = False
+            res = minimize(util, x0, method='SLSQP', bounds=bnds, constraints=cons, options={'disp': disp})
             result[typ - 1, tx] = res.fun
             nopt1[(typ - 1) * 2:(typ - 1) * 2 + 2, tx] = res.x
 #            print(i, tx, typ, tst , tcnt1[i], tcnt2[i],':  ', round(res.x[0], 3), round(res.x[1], 3), 'nratio:', round(nratio, 3))
@@ -248,15 +231,6 @@ for i in range(niter):
         nopt[:, t] = stepsize * nopt1[:, t] + (1 - stepsize) * nopt2[:, t]
         state(nopt[0, t], nopt[1, t], nopt[2, t], nopt[3, t], t)    
         er2[t] = sum(abs(nopt2[:, t] - nopt1[:, t]))
-    for tx in range(1, Tmax):
-        for typ in [1, 2]:
-            if typ == 1:                            #Unskilled
-                ca[0, tx] = (wu[tx] * (1 - gammau[0, tx]) + (beta/alpha) * pa[tx] * C_0)/((1 + (beta/alpha)) * pa[tx])
-                cm[0, tx] = (beta/alpha) * pa[t] * (ca[0, t] - C_0)
-            if typ == 2:                            #Unskilled
-                ca[1, tx] = (ws[tx] * (1 - gammas[0, tx]) + (beta/alpha) * pa[tx] * C_0)/((1 + (beta/alpha)) * pa[tx])
-                cm[1, tx] = (beta/alpha) * pa[tx] * (ca[1, tx] - C_0)
-            util(nopt[(typ - 1) * 2:(typ - 1) * 2 + 2, tx])
     
     x = range(1840, 2115)
     Tm = 174
@@ -284,8 +258,8 @@ for i in range(niter):
     
     plt.plot(x[0:Tmax], wr[0:Tmax], 'r')
     plt.plot(x[0:Tmax], [ts/tu]*Tmax, 'g')
-    plt.plot(x[0:Tmax], [j + tol1 for j in [ts/tu]*Tmax] , 'g--')
-    plt.plot(x[0:Tmax], [j - tol1 for j in [ts/tu]*Tmax], 'g--')    
+    plt.plot(x[0:Tmax], [ts/tu + tol1]*Tmax , 'g--')
+    plt.plot(x[0:Tmax], [ts/tu - tol1 ]*Tmax, 'g--')    
     plt.xlabel('Time')
     plt.ylabel('Ratio')
     plt.title('Wages ratio')
@@ -296,12 +270,12 @@ for i in range(niter):
     
     plt.plot(x[0:Tmax], er2[0:Tmax], 'r')
     plt.plot(x[0:Tmax], [0]*Tmax, 'g')
-    plt.plot(x[0:Tmax], [j + tol2 for j in [0]*Tmax] , 'g--')    
+    plt.plot(x[0:Tmax], [tol2]*Tmax , 'g--')    
     plt.xlabel('Time')
     plt.ylabel('Error')
     plt.title('Error as the cumulative difference between two runs')
     axes = plt.gca()
-    axes.set_xlim([1900,2010])
+    axes.set_xlim([1840,2010])
     plt.show()
     
     plt.plot(x[0:Tmax], nopt2[0, 0:Tmax], 'm--', label = "unskilled children: previous run")
@@ -312,7 +286,7 @@ for i in range(niter):
     plt.ylabel('Number of children')
     plt.title('Number of children of the unskilled parents')
     axes = plt.gca()
-    axes.set_xlim([1900,2010])
+    axes.set_xlim([1840,2010])
     axes.set_ylim([0,2.5])    
     plt.legend(loc=1, prop={'size':8})
     plt.show()
@@ -325,18 +299,20 @@ for i in range(niter):
     plt.ylabel('Number of children')
     plt.title('Number of children of the skilled parents')
     axes = plt.gca()
-    axes.set_xlim([1900,2010])
+    axes.set_xlim([1840,2010])
     axes.set_ylim([0,2.5])      
     plt.legend(loc=1, prop={'size':8})
     plt.show()
  
     plt.plot(x[0:Tmax], gammau[0, 0:Tmax], 'm', label = "unskilled parents")
-    plt.plot(x[0:Tmax], gammas[0, 0:Tmax], 'c', label = "skilled parents")  
+    plt.plot(x[0:Tmax], gammas[0, 0:Tmax], 'c', label = "skilled parents")
+    plt.plot(x[0:Tmax], [1 - alpha - beta]*Tmax , 'b--')  
     plt.xlabel('Time')
     plt.ylabel('Ratio')
     plt.title('Parenting time as a portion of the total time')
     axes = plt.gca()
-    axes.set_xlim([1900,2010])     
+    axes.set_xlim([1840,2010])
+    axes.set_ylim([(1-alpha-beta) - 0.2,(1-alpha-beta) + 0.2])
     plt.legend(loc=1, prop={'size':8})
     plt.show()
    

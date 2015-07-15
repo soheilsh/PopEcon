@@ -56,13 +56,8 @@ Y = [0]*T                           # Total output
 Ya = [0]*T                          # Agricultural output
 Ym = [0]*T                          # Manufacturing output
 
-# == Consumption == #
-ca = np.zeros((2, T))               # Consumption of Agricultural good
-cm = np.zeros((2, T))               # Consumption of Manufacturing good
-
 # == Utility == #
-W = np.zeros((2, 40))               # Utility at each age
-U = np.zeros((2, Tmax))             # Total Utility
+W = [0]*40                          # Utility at each age
 df = [0]*40                         # Discount factor
 for t in range(40):
     df[t] = 1/(1 + ro)**t
@@ -80,9 +75,9 @@ er2 = [0]*T                         # Difference between new and old solutions
 tol1 = 0.05                         # Error margin for constraints
 tol2 = 0.05                         # Error margin for results
 stepsize = 0.1                      # Step size
-tcnt1 = [0]*T                       # Number of points within the error band (for the whole time period)
-tcnt2 = [0]*T                       # Number of points within the error band (for the 1900-2010 period)
-niter = 1                           # number of iterations
+niter = 500                         # number of iterations
+tcnt1 = [0]*niter                   # Number of points within the error band (for the whole time period)
+tcnt2 = [0]*niter                   # Number of points within the error band (for the 1900-2010 period)
 
 PopData =  [0]*Tmax
 GDPData =  [0]*Tmax
@@ -132,33 +127,43 @@ def state(nuu, nsu, nus, nss, t):
 
 def util(n):
     gamma = n[0] * tu + n[1] * ts 
-    U[typ - 1, tx] = 0
+    U = 0
     wud = 0
     wsd = 0
     for t in range(tx + 20, tx + 60):
         wud = wud + wu[t] * df[t - (tx + 20)]
-        wsd = wsd + wu[t] * df[t - (tx + 20)]
-    for t in range(tx, tx + 40):
-        if t<tx + 20:
-            if typ == 1:
-                cax = (wu[t] * (1 - gamma) + (beta/alpha) * pa[t] * C_0)/((1 + (beta/alpha)) * pa[t])
-                cmx = (beta/alpha) * pa[t] * (cax - C_0)
-                W[0, t - tx] = alpha * np.log(cax - C_0) + beta * np.log(cmx) + (1 - alpha - beta) * np.log(n[0] * wud + n[1] * wsd)
-            else:
-                cax = (ws[t] * (1 - gamma) + (beta/alpha) * pa[t] * C_0)/((1 + (beta/alpha)) * pa[t])
-                cmx = (beta/alpha) * pa[t] * (cax - C_0)
-                W[1, t - tx] = alpha * np.log(cax - C_0) + beta * np.log(cmx) + (1 - alpha - beta) * np.log(n[0] * wud + n[1] * wsd)
+        wsd = wsd + ws[t] * df[t - (tx + 20)]
+    for t in range(tx, tx + 20):
+        if typ == 1:
+            cax = (wu[t] * (1 - gamma) + (beta/alpha) * pa[t] * C_0)/((1 + (beta/alpha)) * pa[t])
+            cmx = (beta/alpha) * pa[t] * (cax - C_0)
+            W[t - tx] = alpha * np.log(cax - C_0) + beta * np.log(cmx) + (1 - alpha - beta) * np.log(n[0] * wud + n[1] * wsd)
         else:
-            if typ == 1:
-                cax = (wu[t] + (beta/alpha) * pa[t] * C_0)/((1 + (beta/alpha)) * pa[t])
-                cmx = (beta/alpha) * pa[t] * (cax - C_0)                
-                W[0, t - tx] = alpha * np.log(cax - C_0) + beta * np.log(cmx)
-            else:
-                cax = (ws[t] + (beta/alpha) * pa[t] * C_0)/((1 + (beta/alpha)) * pa[t])
-                cmx = (beta/alpha) * pa[t] * (cax - C_0)                 
-                W[1, t - tx] = alpha * np.log(cax - C_0) + beta * np.log(cmx)
-        U[typ - 1, tx] = U[typ - 1, tx] + W[typ - 1, t - tx] * df[t - tx]
-    return -U[typ - 1, tx]
+            cax = (ws[t] * (1 - gamma) + (beta/alpha) * pa[t] * C_0)/((1 + (beta/alpha)) * pa[t])
+            cmx = (beta/alpha) * pa[t] * (cax - C_0)
+            W[t - tx] = alpha * np.log(cax - C_0) + beta * np.log(cmx) + (1 - alpha - beta) * np.log(n[0] * wud + n[1] * wsd)
+            
+#    for t in range(tx, tx + 40):
+#        if t<tx + 20:
+#            if typ == 1:
+#                cax = (wu[t] * (1 - gamma) + (beta/alpha) * pa[t] * C_0)/((1 + (beta/alpha)) * pa[t])
+#                cmx = (beta/alpha) * pa[t] * (cax - C_0)
+#                W[t - tx] = alpha * np.log(cax - C_0) + beta * np.log(cmx) + (1 - alpha - beta) * np.log(n[0] * wud + n[1] * wsd)
+#            else:
+#                cax = (ws[t] * (1 - gamma) + (beta/alpha) * pa[t] * C_0)/((1 + (beta/alpha)) * pa[t])
+#                cmx = (beta/alpha) * pa[t] * (cax - C_0)
+#                W[t - tx] = alpha * np.log(cax - C_0) + beta * np.log(cmx) + (1 - alpha - beta) * np.log(n[0] * wud + n[1] * wsd)
+#        else:
+#            if typ == 1:
+#                cax = (wu[t] + (beta/alpha) * pa[t] * C_0)/((1 + (beta/alpha)) * pa[t])
+#                cmx = (beta/alpha) * pa[t] * (cax - C_0)                
+#                W[t - tx] = alpha * np.log(cax - C_0) + beta * np.log(cmx)
+#            else:
+#                cax = (ws[t] + (beta/alpha) * pa[t] * C_0)/((1 + (beta/alpha)) * pa[t])
+#                cmx = (beta/alpha) * pa[t] * (cax - C_0)                 
+#                W[t - tx] = alpha * np.log(cax - C_0) + beta * np.log(cmx)
+        U = U + W[t - tx] * df[t - tx]
+    return -U
 
 # == Initializing @ year 1840 == #
 u[0:20, 0] = [0.521743004, 0.576141049, 0.604033241, 0.577785019, 0.592997873, 0.574931298, 0.566337374, 0.53020305, 0.568835914, 0.468570899, 0.542695061, 0.432128187, 0.520871421, 0.443058421, 0.482480313, 0.415404037, 0.453997221, 0.424748101, 0.460572766, 0.386064659]
@@ -198,14 +203,6 @@ Y[0] = pa[0] * Ya[0] + Ym[0]
 
 for t in range(1, T):
     state(nopt[0, t], nopt[1, t], nopt[2, t], nopt[3, t], t)
-for t in range(1, Tmax):
-    for typ in [1, 2]:
-        if typ == 1:                            #Unskilled
-            ca[0, t] = (wu[t] * (1 - gammau[0, t]) + (beta/alpha) * pa[t] * C_0)/((1 + (beta/alpha)) * pa[t])
-            cm[0, t] = (beta/alpha) * pa[t] * (ca[0, t] - C_0)
-        if typ == 2:                            #Unskilled
-            ca[1, t] = (ws[t] * (1 - gammas[0, t]) + (beta/alpha) * pa[t] * C_0)/((1 + (beta/alpha)) * pa[t])
-            cm[1, t] = (beta/alpha) * pa[t] * (ca[1, t] - C_0)    
 for i in range(niter):
     tcnt1[i]=0
     tcnt2[i]=0
@@ -214,6 +211,7 @@ for i in range(niter):
         wr[tx] = sum(ws[tx+20:tx+60])/sum(wu[tx+20:tx+60])
         er1[tx] = wr[tx] - (ts/tu)
         nratio = np.mean([nopt[0, tx]/nopt[1, tx], nopt[2, tx]/nopt[3, tx]])
+#        nratio = 1
         if er1[tx] > tol1:
             tst = 's'
             bnds = [(0, 0), (0, None)]
@@ -248,15 +246,6 @@ for i in range(niter):
         nopt[:, t] = stepsize * nopt1[:, t] + (1 - stepsize) * nopt2[:, t]
         state(nopt[0, t], nopt[1, t], nopt[2, t], nopt[3, t], t)    
         er2[t] = sum(abs(nopt2[:, t] - nopt1[:, t]))
-    for tx in range(1, Tmax):
-        for typ in [1, 2]:
-            if typ == 1:                            #Unskilled
-                ca[0, tx] = (wu[tx] * (1 - gammau[0, tx]) + (beta/alpha) * pa[tx] * C_0)/((1 + (beta/alpha)) * pa[tx])
-                cm[0, tx] = (beta/alpha) * pa[t] * (ca[0, t] - C_0)
-            if typ == 2:                            #Unskilled
-                ca[1, tx] = (ws[tx] * (1 - gammas[0, tx]) + (beta/alpha) * pa[tx] * C_0)/((1 + (beta/alpha)) * pa[tx])
-                cm[1, tx] = (beta/alpha) * pa[tx] * (ca[1, tx] - C_0)
-            util(nopt[(typ - 1) * 2:(typ - 1) * 2 + 2, tx])
     
     x = range(1840, 2115)
     Tm = 174
@@ -331,7 +320,8 @@ for i in range(niter):
     plt.show()
  
     plt.plot(x[0:Tmax], gammau[0, 0:Tmax], 'm', label = "unskilled parents")
-    plt.plot(x[0:Tmax], gammas[0, 0:Tmax], 'c', label = "skilled parents")  
+    plt.plot(x[0:Tmax], gammas[0, 0:Tmax], 'c', label = "skilled parents")
+    plt.plot(x[0:Tmax], [j + (1 - alpha - beta) for j in [0]*Tmax] , 'b--')  
     plt.xlabel('Time')
     plt.ylabel('Ratio')
     plt.title('Parenting time as a portion of the total time')
